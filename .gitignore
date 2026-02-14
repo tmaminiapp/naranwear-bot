@@ -1,0 +1,87 @@
+# === СЕКРЕТНЫЕ ДАННЫЕ ===
+# Файлы с ключами API и токенами
+.env
+.env.*
+*.key
+*secret*
+*token*
+config.py
+credentials.json
+config_local.py
+secrets.py
+firebase_key.json
+
+# === ВИРТУАЛЬНОЕ ОКРУЖЕНИЕ ===
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*/
+
+# === ФАЙЛЫ PYTHON ===
+# Кэш Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Дистрибутивы и сборки
+dist/
+build/
+*.egg-info/
+*.egg
+*.whl
+
+# === ЛОГИ И БАЗЫ ДАННЫХ ===
+*.log
+*.db
+*.sqlite
+*.sqlite3
+
+# === JUPYTER NOTEBOOKS ===
+.ipynb_checkpoints/
+*.ipynb
+
+# === СИСТЕМНЫЕ ФАЙЛЫ ===
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# === РЕДАКТОРЫ ===
+.vscode/
+.idea/
+*.sublime-*
+.project
+.classpath
+.settings/
+
+# === ТЕСТЫ И ПОКРЫТИЕ ===
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.mypy_cache/
+.ruff_cache/
+
+# === ПЕРЕМЕННЫЕ ОКРУЖЕНИЯ ===
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# === ВРЕМЕННЫЕ ФАЙЛЫ ===
+*.tmp
+*.temp
+*.pid
+*.bak
+*.swp
