@@ -1,49 +1,49 @@
 import asyncio
 import json
 import logging
-import os
 import sqlite3
 import threading
-from dotenv import load_dotenv  # <-- ДОБАВЛЕНО
-
 import firebase_admin
 from firebase_admin import credentials, firestore
 from telegram import Update, WebAppInfo, KeyboardButton, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from dotenv import load_dotenv
+import os
 
 # Загружаем переменные из .env
-load_dotenv()  # <-- ДОБАВЛЕНО
+load_dotenv()
 
 # 1. Настройка логирования
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # Читаем переменные из окружения
-TOKEN = os.getenv('BOT_TOKEN')  # <-- ИЗМЕНЕНО
-ADMIN_ID = int(os.getenv('ADMIN_ID', '0'))  # <-- ИЗМЕНЕНО
-WEBAPP_URL = os.getenv('WEBAPP_URL')  # <-- ИЗМЕНЕНО
-FIREBASE_CRED_PATH = os.getenv('FIREBASE_CRED_PATH', 'firebase_key.json')  # <-- ИЗМЕНЕНО
+TOKEN = os.getenv('BOT_TOKEN')
+ADMIN_ID = int(os.getenv('ADMIN_ID', '0'))
+WEBAPP_URL = os.getenv('WEBAPP_URL')
+FIREBASE_CRED_PATH = os.getenv('FIREBASE_CRED_PATH', 'firebase_key.json')
 
 db_fs = None
+
 
 # --- ИНИЦИАЛИЗАЦИЯ FIREBASE ---
 def init_firebase():
     global db_fs
     try:
-        # Используем путь из переменных окружения
-        cred = credentials.Certificate(FIREBASE_CRED_PATH)  # <-- ИЗМЕНЕНО
+        cred = credentials.Certificate(FIREBASE_CRED_PATH)
         firebase_admin.initialize_app(cred)
         db_fs = firestore.client()
         print("✅ Firebase успешно подключен")
     except Exception as e:
         print(f"❌ Ошибка Firebase: {e}")
+        db_fs = None
 
-# --- ОСТАЛЬНОЙ КОД БЕЗ ИЗМЕНЕНИЙ ---
-# (все функции остаются такими же)
 
 # --- ФОНОВОЕ СЛУШАНИЕ ИЗМЕНЕНИЙ (УВЕДОМЛЕНИЕ КЛИЕНТУ) ---
 def setup_firebase_listener(loop, application):
     global db_fs
-    if db_fs is None: return
+    if db_fs is None: 
+        print("⚠️ Firebase не подключен, слушатель не запущен")
+        return
 
     def on_snapshot(col_snapshot, changes, read_time):
         for change in changes:
@@ -71,6 +71,7 @@ def setup_firebase_listener(loop, application):
                     print(f"📩 Уведомление ({status}) ушло клиенту {client_id}")
 
     db_fs.collection('orders').on_snapshot(on_snapshot)
+    print("👂 Firebase слушатель запущен")
 
 
 # --- ОБРАБОТКА НОВОГО ЗАКАЗА ---
@@ -93,10 +94,10 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not items_list and 'items' in data:
             items = data.get('items', [])
             items_list = "\n".join(
-                [f"▫️ {i.get('title')} ({i.get('size') or i.get('selSize') or '-'}) — {i.get('price')} ₽" for i in
-                 items])
+                [f"▫️ {i.get('title')} ({i.get('size') or i.get('selSize') or '-'}) — {i.get('price')} ₽" for i in items])
 
-        if not items_list: items_list = "Состав не указан"
+        if not items_list: 
+            items_list = "Состав не указан"
 
         # 1. Сохраняем в Firebase для админки
         if db_fs:
@@ -107,6 +108,7 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 'createdAt': firestore.SERVER_TIMESTAMP
             }
             db_fs.collection("orders").add(order_entry)
+            print(f"✅ Заказ #{order_id} сохранен в Firebase")
 
         # 2. Формируем ПОЛНЫЕ ДАННЫЕ для сообщения админу
         admin_message = (
@@ -122,7 +124,7 @@ async def web_app_data(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👉 <a href='tg://user?id={user_id}'>Связаться с клиентом</a>"
         )
 
-        # Отправляем сообщение админу БЕЗ КНОПОК
+        # Отправляем сообщение админу
         await context.bot.send_message(
             chat_id=ADMIN_ID,
             text=admin_message,
@@ -149,7 +151,14 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler('start', start))
     application.add_handler(MessageHandler(filters.StatusUpdate.WEB_APP_DATA, web_app_data))
 
-    loop = asyncio.get_event_loop()
+    # Безопасное получение event loop
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+    # Запускаем Firebase listener в отдельном потоке
     threading.Thread(target=setup_firebase_listener, args=(loop, application), daemon=True).start()
 
     print("🚀 Бот запущен...")
